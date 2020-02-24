@@ -1,0 +1,148 @@
+C51 COMPILER V9.53.0.0   UPS                                                               02/24/2020 10:47:39 PAGE 1   
+
+
+C51 COMPILER V9.53.0.0, COMPILATION OF MODULE UPS
+OBJECT MODULE PLACED IN ups.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ups.c OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "reg51.h"
+   2          #include "intrins.h"
+   3          
+   4          #define FOSC    11059200L
+   5          #define BAUD    9600
+   6          
+   7          typedef unsigned char BYTE;
+   8          typedef unsigned int WORD;
+   9          
+  10          #define     URMD    0           //0:??SG¶¨?±??2????²¨????·?????
+  11                                          //1:??SG¶¨?±??1µ??£?½0(16?»??¶?F????£?½)????²¨????·?????
+  12                                          //2:??SG¶¨?±??1µ??£?½2(8?»??¶?F????£?½)????²¨????·?????
+  13          
+  14          sfr T2H   = 0xd6;               //¶¨?±??2??8?»
+  15          sfr T2L   = 0xd7;               //¶¨?±??2µ?8?»
+  16          
+  17          
+  18          sbit P10 = P1^0;  // adc input 1
+  19          sbit P11 = P1^1;  // adc input 2
+  20          
+  21          sbit P32 = P3^2;  // LED 1
+  22          sbit P33 = P3^3;  // LED 2
+  23          
+  24          sfr P5   = 0xC8;
+  25          sbit P54 = P5^4; // out 1
+  26          sbit P55 = P5^5; // out 2
+  27          
+  28          sfr  AUXR       =   0x8e;       //?¨F???????                              
+  29          
+  30          sfr ADC_CONTR = 0xbc;
+  31          sfr ADC_RES = 0xbd;
+  32          sfr ADC_RESL = 0xbE;
+  33          sfr P1ASF = 0x9D;
+  34          
+  35          /*Define ADC operation const for ADC_CONTR*/
+  36          #define ADC_POWER   0x80            //ADC power control bit
+  37          #define ADC_FLAG    0x10            //ADC complete flag
+  38          #define ADC_START   0x08            //ADC start control bit
+  39          #define ADC_SPEEDLL 0x00             //540 clocks
+  40          #define ADC_SPEEDL  0x20            //360 clocks
+  41          #define ADC_SPEEDH  0x40            //180 clocks
+  42          #define ADC_SPEEDHH 0x60            //90 clocks
+  43          
+  44          /*----------------------------
+  45          Initial ADC sfr
+  46          ----------------------------*/
+  47          void InitADC(BYTE chan)
+  48          {
+  49   1        P1ASF |= 1 << chan;             //enable channel ADC function
+  50   1        ADC_RES = 0;                    //Clear previous result
+  51   1        ADC_CONTR = ADC_POWER | ADC_SPEEDLL;
+  52   1        _nop_(); _nop_(); _nop_(); //waiting for power stability;    
+  53   1        //Delay(2);                       //ADC power-on and delay
+  54   1      }
+  55          
+C51 COMPILER V9.53.0.0   UPS                                                               02/24/2020 10:47:39 PAGE 2   
+
+  56          int getADCResult(char chan)
+  57          {
+  58   1        // todo: was ADC_SPEEDHH
+  59   1        
+  60   1        ADC_CONTR = ADC_POWER | ADC_SPEEDLL | ADC_START | chan;
+  61   1        _nop_();       //Must wait before inquiry
+  62   1        _nop_(); _nop_(); _nop_();
+  63   1        while (!(ADC_CONTR & ADC_FLAG));  //Wait complete flag
+  64   1        ADC_CONTR &= ~ADC_FLAG;           //Close ADC
+  65   1      
+  66   1        return  ADC_RES; // << 8 | ADC_RESL;  //Return ADC result, 10 bits
+  67   1      }
+  68          
+  69          
+  70          char input;
+  71          
+  72          void input1() {
+  73   1        input = 1;
+  74   1        P32 = 1; // LED2 off
+  75   1        P33 = 0; // LED1 on
+  76   1        P54 = 1; // Set P Channel MOSFET 
+  77   1        P55 = 0;
+  78   1      }
+  79          
+  80          void input2() {
+  81   1        input = 2;
+  82   1        P32 = 0; // LED2 on
+  83   1        P33 = 1; // LED1 off
+  84   1        P54 = 0; // Set P Channel MOSFET 
+  85   1        P55 = 1; 
+  86   1      } 
+  87          
+  88          void delay(WORD n)
+  89          {
+  90   1          WORD x;
+  91   1      
+  92   1          while (n--)
+  93   1          {
+  94   2              x = 5000;
+  95   2              while (x--);
+  96   2          }
+  97   1      }
+  98          
+  99          void main() {
+ 100   1        int in1;
+ 101   1        //  InitUart();                     //³???»??®??
+ 102   1        InitADC(0);
+ 103   1        input1();
+ 104   1        //InitADC(1);
+ 105   1        while (1) {
+ 106   2          in1 = getADCResult(0); // get input 1 
+ 107   2          if ( (input == 1) && ( in1 < 58) ) {
+ 108   3            input2();
+ 109   3          }
+ 110   2          if ( (input == 2) && (in1 > 61)) {
+ 111   3            input1();
+ 112   3            delay(10);
+ 113   3          } 
+ 114   2        }
+ 115   1      }
+ 116          
+ 117          
+C51 COMPILER V9.53.0.0   UPS                                                               02/24/2020 10:47:39 PAGE 3   
+
+ 118          
+ 119          /*
+ 120          stcgal -p COM8 C:\ups.hex
+ 121          */
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    156    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      1    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
