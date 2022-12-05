@@ -2,6 +2,8 @@
 Modification of firmware of STC 15W401AS of a ups module to switch to input 2 if input1 < 11.8V
 
 The module that is sold on ebay/aliexpress/etc accepts 2 inputs of 12V each.
+![image of switch module](./switch%20ups%20module.jpg)
+
 I wanted to use it as a ups to switch to battery if the main input is lost. But I noticed that the module switches to input 2 only if input 1 is bellow 8V. 
 
 If the load is high the drop is quick and the module switches almost immediatelly. 
